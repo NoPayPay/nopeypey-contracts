@@ -16,7 +16,7 @@ contract YieldToken is ERC20, Ownable {
     }
 
     function mint(address to, uint256 amount) external onlyFundsVault {
-        _mint(to, amount);
+        _mint(to, amount * 10**6);
     }
 
     function burnFrom(address from, uint256 amount) external onlyFundsVault {
@@ -36,5 +36,9 @@ contract YieldToken is ERC20, Ownable {
 
     function setFundsVault(address _fundsVault) external onlyOwner {
         fundsVault = _fundsVault;
+    }
+
+     function decimals() public view override returns(uint8) {
+        return 6;
     }
 }

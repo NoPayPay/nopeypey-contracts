@@ -6,4 +6,8 @@ contract MockUSDC is ERC20 {
     constructor() ERC20("Mock USDC", "MUSD") {
         _mint(msg.sender, 1_000_000 * 1e6); // Mint 1 juta USDC dengan 6 decimal
     }
+
+    function decimals() public view override returns(uint8) {
+        return 6;
+    }
 }
