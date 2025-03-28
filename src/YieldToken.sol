@@ -25,11 +25,12 @@ contract YieldToken is ERC20, Ownable {
 
     function sellYieldTokens(uint256 amount) external {
         require(balanceOf(msg.sender) >= amount, "Insufficient YLD");
-        uint256 userShare = (amount * 80) / 100;
+        uint256 userShare = (amount * 80) / 100; // 80% of YIELD TOKEN goes to the user, 20% to the PLATFORM
         uint256 platformShare = amount - userShare;
 
         _burn(msg.sender, amount);
         emit Transfer(msg.sender, address(0), platformShare); // Burn platform share
+        // this call will transfer YT to the caller back
         transfer(msg.sender, userShare); // Transfer user share
     }
 

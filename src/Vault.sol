@@ -14,6 +14,7 @@ contract FundsVault is Ownable {
     YieldToken public yieldToken;
     Treasury public treasury;
 
+    mapping(address user => uint256 amount) private userDeposits; 
     mapping(address => uint256) public depositTimes;
     mapping(address => bool) public fundsClaimed;
 
@@ -27,6 +28,10 @@ contract FundsVault is Ownable {
         yieldToken = YieldToken(initialParams._yieldToken);
     }
 
+    // --------------------------------------- EVENTS --------------------------------------
+    event Deposited(uint256 depositedAmount, address depositor);
+    event YieldHarvested(uint256 yieldAmount);
+    event PrincipalWithdrew(uint256 amount, address recipient);
 
     struct InitialSetup {
         address _initialOwner;
@@ -38,6 +43,8 @@ contract FundsVault is Ownable {
     }
 
     function deposit(uint256 amount) external {
+        if(usdc.balanceOf(msg.sender) <= 0 || usdc.balanceOf(msg.sender) < amount ) revert("Not Enough to deposit");
+        if(amount <= 0) revert("Insufficient funds");
         usdc.transferFrom(msg.sender, address(this), amount);
         principalToken.mint(msg.sender, amount);
         // why does only 10% of the deposited amount is minted to the user ???
@@ -45,7 +52,10 @@ contract FundsVault is Ownable {
         // approving mock aave pool to pull the funds
         usdc.approve(address(aavePool), amount);
         aavePool.deposit(address(usdc), amount, address(this), 0);
+        emit Deposited(amount, msg.sender);
+
         depositTimes[msg.sender] = block.timestamp;
+        userDeposits[msg.sender] = amount;
         fundsClaimed[msg.sender] = false;
     }
 
@@ -62,6 +72,8 @@ contract FundsVault is Ownable {
         require(yieldAmount > 0, "No yield available");
         // either one of these functions could be commented out
         aavePool.distributeYield(address(this));
+        emit YieldHarvested(yieldAmount);
+
         usdc.approve(address(treasury), yieldAmount);
         treasury.collectFee(yieldAmount);
         return yieldAmount;
@@ -82,6 +94,7 @@ contract FundsVault is Ownable {
 
         principalToken.burn(msg.sender, principalAmount);
         aavePool.withdraw(address(usdc), principalAmount, msg.sender);
+        emit PrincipalWithdrew(principalAmount, msg.sender);
         fundsClaimed[msg.sender] = true;
     }
 
@@ -101,7 +114,19 @@ contract FundsVault is Ownable {
 
         principalToken.burn(user, amount);
         aavePool.withdraw(address(usdc), amount, address(treasury));
+        emit PrincipalWithdrew(amount, address(treasury));
         fundsClaimed[user] = true;
         claimedAmount = amount;
+    }
+
+    function depositInitialFunds(uint256 amount) external onlyOwner returns(uint256 depositedAmount) {
+        usdc.transferFrom(msg.sender, address(this), amount);
+    }
+
+    function payMerchant(uint256 amountToPay_, address merchant) external returns(uint256 paidAmount) {
+        // user should not be allowed to purchase any merchant more than the amount they have deposited to keep protocol stable
+        if(amountToPay_ >= userDeposits[msg.sender]) revert("Insufficient funds to cover the payment");
+        bool isPaid = usdc.transfer(merchant, amountToPay_);
+        if(!isPaid) revert("payment failed");
     }
 }
