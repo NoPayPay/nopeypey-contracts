@@ -49,17 +49,30 @@ contract FundsVault is Ownable {
         fundsClaimed[msg.sender] = false;
     }
 
-    function harvestYield() external onlyOwner {
+    /**
+     * @dev harvesting yield from the pool
+     */
+    function harvestYield() external onlyOwner returns(uint256) {
         // this function should be call by user not owner
-        uint256 yieldAmount = aavePool.calculateYield(address(this));
+        uint256 yieldAmount;
+        unchecked {
+            yieldAmount = aavePool.calculateYield(address(this));
+        }
         // 10% of farmed yield goes to the platform, rest go to the user and paid merchant
         require(yieldAmount > 0, "No yield available");
+        // either one of these functions could be commented out
+        aavePool.distributeYield(address(this));
+        usdc.approve(address(treasury), yieldAmount);
         treasury.collectFee(yieldAmount);
+        return yieldAmount;
     }
 
+    /**
+     * @dev user withdrawing their principal assets from the pool goes directly to the user
+     */
     function withdrawPrincipal() external {
         require(
-            block.timestamp - depositTimes[msg.sender] >= 90 days,
+            block.timestamp >= (depositTimes[msg.sender] + 90 days),
             "90-day lockup not completed"
         );
         require(!fundsClaimed[msg.sender], "Already claimed");
@@ -72,9 +85,13 @@ contract FundsVault is Ownable {
         fundsClaimed[msg.sender] = true;
     }
 
-    function claimFunds(address user) external onlyOwner {
+    /**
+     * @dev getting user funds back from the pool goes into treasury
+     * @param user - user address
+     */
+    function claimFunds(address user) external onlyOwner returns(uint256 claimedAmount) {
         require(
-            block.timestamp - depositTimes[user] < 90 days,
+            block.timestamp <= (depositTimes[msg.sender] + 90 days),
             "Lockup period expired"
         );
         require(!fundsClaimed[user], "Already claimed");
@@ -85,5 +102,6 @@ contract FundsVault is Ownable {
         principalToken.burn(user, amount);
         aavePool.withdraw(address(usdc), amount, address(treasury));
         fundsClaimed[user] = true;
+        claimedAmount = amount;
     }
 }

@@ -36,11 +36,18 @@ contract MockAaveLendingPool {
         return amount;
     }
 
-    function calculateYield(address user) external view returns (uint256) {
+    function calculateYield(address user) public view returns (uint256) {
         uint256 principal = deposits[user];
         uint256 timeElapsed = block.timestamp - depositTimes[user];
         uint256 annualYield = (principal * 10) / 100; // 10% annual
         uint256 dailyYield = annualYield / 365;
         return (dailyYield * timeElapsed) / 1 days;
+    }
+
+    function distributeYield(address to) external {
+        if(deposits[to] <= 0) revert("Insufficient balance");
+        uint256 calculatedYield = calculateYield(to);
+        if(calculatedYield <= 0) revert("yield is zero");
+        usdc.transfer(to, calculatedYield);
     }
 }
