@@ -8,7 +8,7 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 contract Treasury is Ownable {
     IERC20 public usdc;
 
-    constructor(address _usdc) Ownable(_usdc) {
+    constructor(address _usdc) Ownable(msg.sender) {
         usdc = IERC20(_usdc);
     }
 

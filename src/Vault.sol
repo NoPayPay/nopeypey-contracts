@@ -18,31 +18,41 @@ contract FundsVault is Ownable {
     mapping(address => bool) public fundsClaimed;
 
     constructor(
-        address _initialOwner,
-        address _usdc,
-        address _aavePool,
-        address _treasury,
-        address _principalToken,
-        address _yieldToken
-    ) Ownable(_initialOwner) {
-        usdc = IERC20(_usdc);
-        aavePool = MockAaveLendingPool(_aavePool);
-        treasury = Treasury(_treasury);
-        principalToken = PrincipalToken(_principalToken);
-        yieldToken = YieldToken(_yieldToken);
+       InitialSetup memory initialParams
+    ) Ownable(initialParams._initialOwner) {
+        usdc = IERC20(initialParams._usdc);
+        aavePool = MockAaveLendingPool(initialParams._aavePool);
+        treasury = Treasury(initialParams._treasury);
+        principalToken = PrincipalToken(initialParams._principalToken);
+        yieldToken = YieldToken(initialParams._yieldToken);
+    }
+
+
+    struct InitialSetup {
+        address _initialOwner;
+        address _usdc;
+        address _aavePool;
+        address _treasury;
+        address _principalToken;
+        address _yieldToken;
     }
 
     function deposit(uint256 amount) external {
         usdc.transferFrom(msg.sender, address(this), amount);
         principalToken.mint(msg.sender, amount);
+        // why does only 10% of the deposited amount is minted to the user ???
         yieldToken.mint(msg.sender, amount * 10 / 100); // 10% of deposit
+        // approving mock aave pool to pull the funds
+        usdc.approve(address(aavePool), amount);
         aavePool.deposit(address(usdc), amount, address(this), 0);
         depositTimes[msg.sender] = block.timestamp;
         fundsClaimed[msg.sender] = false;
     }
 
     function harvestYield() external onlyOwner {
+        // this function should be call by user not owner
         uint256 yieldAmount = aavePool.calculateYield(address(this));
+        // 10% of farmed yield goes to the platform, rest go to the user and paid merchant
         require(yieldAmount > 0, "No yield available");
         treasury.collectFee(yieldAmount);
     }
