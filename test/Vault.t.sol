@@ -46,7 +46,7 @@ contract VaultTest is Test {
     modifier Deposited() {
         vm.startPrank(INITIAL_OWNER);
         usdc.approve(address(vault), TEST_DEPO_AMOUNT);
-        vault.deposit(TEST_DEPO_AMOUNT);
+        vault.deposit(TEST_DEPO_AMOUNT, 90 days);
         _;
     }
 
@@ -57,7 +57,7 @@ contract VaultTest is Test {
 
         vm.startPrank(INITIAL_OWNER);
         usdc.approve(address(vault), TEST_DEPO_AMOUNT);
-        vault.deposit(TEST_DEPO_AMOUNT);
+        vault.deposit(TEST_DEPO_AMOUNT, 90 days);
         uint256 balanceAfter = usdc.balanceOf(INITIAL_OWNER);
         console.log("balance after", balanceAfter);
 
@@ -152,7 +152,16 @@ contract VaultTest is Test {
 
     function test_getDecimal() public {
         uint256 ytDecimals = yieldtoken.decimals();
-        console.log(ytDecimals);
+        uint256 ptDecimals = principal.decimals();
+        uint256 usdcDecimals = usdc.decimals();
+
+        console.log("YT",ytDecimals);
+        console.log("PT", ptDecimals);
+        console.log("USDC", usdcDecimals);
     } 
+
+    function testMintPrincipal() public {
+        principal.mint(INITIAL_OWNER, 100);
+    }
 
 }

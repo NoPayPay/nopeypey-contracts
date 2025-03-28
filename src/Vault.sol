@@ -15,6 +15,7 @@ contract FundsVault is Ownable {
     Treasury public treasury;
 
     mapping(address user => uint256 amount) private userDeposits; 
+    mapping(address user => mapping(address token => uint256 amount)) private tokenLockPeriod;
     mapping(address => uint256) public depositTimes;
     mapping(address => bool) public fundsClaimed;
 
@@ -42,7 +43,7 @@ contract FundsVault is Ownable {
         address _yieldToken;
     }
 
-    function deposit(uint256 amount) external {
+    function deposit(uint256 amount, uint256 lockPeriod) external {
         if(usdc.balanceOf(msg.sender) <= 0 || usdc.balanceOf(msg.sender) < amount ) revert("Not Enough to deposit");
         if(amount <= 0) revert("Insufficient funds");
         usdc.transferFrom(msg.sender, address(this), amount);
@@ -55,7 +56,8 @@ contract FundsVault is Ownable {
         emit Deposited(amount, msg.sender);
 
         depositTimes[msg.sender] = block.timestamp;
-        userDeposits[msg.sender] = amount;
+        userDeposits[msg.sender] += amount;
+        tokenLockPeriod[msg.sender][address(usdc)] = lockPeriod;
         fundsClaimed[msg.sender] = false;
     }
 
@@ -83,8 +85,9 @@ contract FundsVault is Ownable {
      * @dev user withdrawing their principal assets from the pool goes directly to the user
      */
     function withdrawPrincipal() external {
+        uint256 lockPeriod = tokenLockPeriod[msg.sender][address(usdc)];
         require(
-            block.timestamp >= (depositTimes[msg.sender] + 90 days),
+            block.timestamp >= (depositTimes[msg.sender] + lockPeriod),
             "90-day lockup not completed"
         );
         require(!fundsClaimed[msg.sender], "Already claimed");
@@ -103,8 +106,9 @@ contract FundsVault is Ownable {
      * @param user - user address
      */
     function claimFunds(address user) external onlyOwner returns(uint256 claimedAmount) {
+        uint256 lockPeriod = tokenLockPeriod[msg.sender][address(usdc)];
         require(
-            block.timestamp <= (depositTimes[msg.sender] + 90 days),
+            block.timestamp <= (depositTimes[msg.sender] + lockPeriod),
             "Lockup period expired"
         );
         require(!fundsClaimed[user], "Already claimed");
@@ -128,5 +132,10 @@ contract FundsVault is Ownable {
         if(amountToPay_ >= userDeposits[msg.sender]) revert("Insufficient funds to cover the payment");
         bool isPaid = usdc.transfer(merchant, amountToPay_);
         if(!isPaid) revert("payment failed");
+    }
+
+    function getLockPeriod(address user) public returns(uint256) {
+        uint256 lockupPeriod = tokenLockPeriod[user][address(usdc)];
+        return lockupPeriod; 
     }
 }

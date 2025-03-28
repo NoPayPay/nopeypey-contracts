@@ -14,7 +14,7 @@ contract PrincipalToken is ERC20, Ownable {
     }
 
     function mint(address to, uint256 amount) external onlyFundsVault {
-        _mint(to, amount*10**6);
+        _mint(to, amount);
     }
 
     function burn(address from, uint256 amount) external onlyFundsVault {
