@@ -9,5 +9,6 @@ remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"]
 
 [etherscan] 
 sepolia = { key = "${ETHERSCAN_API_KEY}" }
+arbitrum-sepolia = { key= "${ARBISCAN_API_KEY}", chain = 71717100}
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

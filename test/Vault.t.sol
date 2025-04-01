@@ -139,7 +139,7 @@ contract VaultTest is Test {
         
     }
 
-    function test_payingMerchantAboveTheirDepositedAmount() public Deposited {
+    function test_payingMerchantExceededTheirDepositedAmount() public Deposited {
         uint256 balanceMerchantBfore = usdc.balanceOf(MERCHANT);
         uint256 amountToPay = 150e6;
         console.log("before payment", balanceMerchantBfore);
@@ -159,9 +159,5 @@ contract VaultTest is Test {
         console.log("PT", ptDecimals);
         console.log("USDC", usdcDecimals);
     } 
-
-    function testMintPrincipal() public {
-        principal.mint(INITIAL_OWNER, 100);
-    }
 
 }
