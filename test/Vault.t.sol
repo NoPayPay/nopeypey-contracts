@@ -8,6 +8,7 @@ import { YieldToken } from "../src/YieldToken.sol";
 import { PrincipalToken } from "../src/PrincipalToken.sol";
 import {Treasury } from "../src/Treasury.sol";
 import { FundsVault } from "../src/Vault.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract VaultTest is Test {
 
@@ -64,7 +65,7 @@ contract VaultTest is Test {
         vm.warp(passedlockPeriod); // passing the lockup period
         vault.withdrawPrincipal();
         uint256 balanceAfterWd = usdc.balanceOf(INITIAL_OWNER);
-        console.log("balance WD", balanceAfterWd);
+        console.log("balance after WD", balanceAfterWd);
 
         vm.stopPrank();
 
@@ -75,12 +76,12 @@ contract VaultTest is Test {
         uint256 passedlockPeriod = block.timestamp + 90 days;
       
         uint256 balanceAfterDeposit = usdc.balanceOf(INITIAL_OWNER);
-        console.log("balance after", balanceAfterDeposit);
+        console.log("balance after deposit", balanceAfterDeposit);
 
         vm.warp(passedlockPeriod); // passing the lockup period
         vault.withdrawPrincipal();
         uint256 balanceAfterWd = usdc.balanceOf(INITIAL_OWNER);
-        console.log("balance WD", balanceAfterWd);
+        console.log("balance after WD", balanceAfterWd);
 
         vm.stopPrank();
 
@@ -148,6 +149,17 @@ contract VaultTest is Test {
         vault.payMerchant(amountToPay, MERCHANT);
         vm.stopPrank();
         
+    }
+
+    function test_sellYieldTtokens() public Deposited {
+        uint256 balance = IERC20(address(yieldtoken)).balanceOf(INITIAL_OWNER);
+        vault.sellYieldTokensForTokens(balance, address(usdc));
+        uint256 balanceAfterSell = IERC20(address(yieldtoken)).balanceOf(INITIAL_OWNER);
+
+        console.log("yield token balance before selling", balance);
+        console.log("yield token balance after selling", balanceAfterSell);
+
+        assert(balanceAfterSell < balance);
     }
 
     function test_getDecimal() public {

@@ -83,7 +83,7 @@ contract FundsVault is Ownable {
     }
 
        /**
-     * @dev user selling their YT for a token (USDT, DAI, USDC)
+     * @dev user selling their YT for a token (USDT, DAI, USDC), this contract must holds some amount of the sellFor token.
      * @param amount - an amount to sell or burn
      * @param sellFor - a token user will get in return for selling their YT
      */
