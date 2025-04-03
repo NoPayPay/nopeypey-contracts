@@ -8,13 +8,13 @@ import { YieldToken } from "./YieldToken.sol";
 import { Treasury } from "./Treasury.sol";
 
 contract FundsVault is Ownable {
-    IERC20 public immutable usdc;
-    MockAaveLendingPool public aavePool;
-    PrincipalToken public principalToken;
-    YieldToken public yieldToken;
-    Treasury public treasury;
+    IERC20 private immutable usdc;
+    MockAaveLendingPool private aavePool;
+    PrincipalToken private principalToken;
+    YieldToken private yieldToken;
+    Treasury private treasury;
 
-    mapping(address user => uint256 amount) private userDeposits; 
+    mapping(address user => uint256 amount) public userDeposits; 
     mapping(address user => mapping(address token => uint256 amount)) private tokenLockPeriod;
     mapping(address => uint256) public depositTimes;
     mapping(address => bool) public fundsClaimed;
@@ -33,6 +33,7 @@ contract FundsVault is Ownable {
     event Deposited(uint256 depositedAmount, address depositor);
     event YieldHarvested(uint256 yieldAmount);
     event PrincipalWithdrew(uint256 amount, address recipient);
+    event Transfer(address indexed from_, address indexed to_, uint256 indexed amount_);
 
     struct InitialSetup {
         address _initialOwner;
@@ -81,6 +82,21 @@ contract FundsVault is Ownable {
         return yieldAmount;
     }
 
+       /**
+     * @dev user selling their YT for a token (USDT, DAI, USDC)
+     * @param amount - an amount to sell or burn
+     * @param sellFor - a token user will get in return for selling their YT
+     */
+    function sellYieldTokensForTokens(uint256 amount, address sellFor) external {
+        require(IERC20(address(yieldToken)).balanceOf(msg.sender) >= amount, "Insufficient YLD");
+        uint256 userShares = (amount * 80) / 100; // 80% of YIELD TOKEN goes to the user, 20% to the PLATFORM
+        uint256 platformShares = amount - userShares;
+        yieldToken.burnFrom(msg.sender, amount); // Burning all the yield tokens
+        // sending 80% of user shares to the user.
+        IERC20(sellFor).transfer(msg.sender, userShares);
+        emit Transfer(msg.sender, address(0), userShares); 
+    }
+
     /**
      * @dev user withdrawing their principal assets from the pool goes directly to the user
      */
@@ -106,9 +122,9 @@ contract FundsVault is Ownable {
      * @param user - user address
      */
     function claimFunds(address user) external onlyOwner returns(uint256 claimedAmount) {
-        uint256 lockPeriod = tokenLockPeriod[msg.sender][address(usdc)];
+        uint256 lockPeriod = tokenLockPeriod[user][address(usdc)];
         require(
-            block.timestamp <= (depositTimes[msg.sender] + lockPeriod),
+            block.timestamp <= (depositTimes[user] + lockPeriod),
             "Lockup period expired"
         );
         require(!fundsClaimed[user], "Already claimed");
@@ -123,10 +139,19 @@ contract FundsVault is Ownable {
         claimedAmount = amount;
     }
 
+    /**
+     * @dev depositing an initial funds into this contract, only owner can call this function
+     * @param amount - an amount to deposit
+     */
     function depositInitialFunds(uint256 amount) external onlyOwner returns(uint256 depositedAmount) {
         usdc.transferFrom(msg.sender, address(this), amount);
     }
 
+    /**
+     * @dev pay the purchasing item by user, only allow user to pay the merchant if their deposited amount are greather than the amount to pay the merchant. 
+     * @param amountToPay_ - an amount to pay
+     * @param merchant - a merchant wallet 
+     */
     function payMerchant(uint256 amountToPay_, address merchant) external returns(uint256 paidAmount) {
         // user should not be allowed to purchase any merchant more than the amount they have deposited to keep protocol stable
         if(amountToPay_ >= userDeposits[msg.sender]) revert("Insufficient funds to cover the payment");
@@ -137,5 +162,15 @@ contract FundsVault is Ownable {
     function getLockPeriod(address user) public returns(uint256) {
         uint256 lockupPeriod = tokenLockPeriod[user][address(usdc)];
         return lockupPeriod; 
+    }
+
+    function getHoldings(address user) public returns(uint256, uint256) {
+         uint256 yt = IERC20(address(yieldToken)).balanceOf(user);
+         uint256 pt = IERC20(address(principalToken)).balanceOf(user);
+         return (yt, pt);
+    }
+
+    function getCurrentAPY() public returns(uint256) {
+        return 10; // represents 10%
     }
 }
