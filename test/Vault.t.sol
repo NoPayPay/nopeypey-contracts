@@ -48,6 +48,7 @@ contract VaultTest is Test {
         vm.startPrank(INITIAL_OWNER);
         usdc.approve(address(vault), TEST_DEPO_AMOUNT);
         vault.deposit(TEST_DEPO_AMOUNT, 90 days);
+        console.log( "user deposit", (vault.userDeposits(INITIAL_OWNER)));
         _;
     }
 
@@ -171,5 +172,18 @@ contract VaultTest is Test {
         console.log("PT", ptDecimals);
         console.log("USDC", usdcDecimals);
     } 
+
+    function test_getHoldingsAndLockPeriod() public Deposited {
+
+        (uint256 yt, uint256 pt) = vault.getHoldings(INITIAL_OWNER);
+        uint256 lockPeriod = vault.getLockPeriod(INITIAL_OWNER);
+        uint256 currentAPY = vault.getCurrentAPY();
+        vm.stopPrank();
+
+        console.log("yt:", yt);
+        console.log("pt:", pt);
+        console.log("lockPeriod:", lockPeriod);
+        console.log("currentAPY:", currentAPY);
+    }
 
 }

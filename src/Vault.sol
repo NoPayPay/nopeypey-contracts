@@ -159,18 +159,18 @@ contract FundsVault is Ownable {
         if(!isPaid) revert("payment failed");
     }
 
-    function getLockPeriod(address user) public returns(uint256) {
+    function getLockPeriod(address user) public view returns(uint256) {
         uint256 lockupPeriod = tokenLockPeriod[user][address(usdc)];
         return lockupPeriod; 
     }
 
-    function getHoldings(address user) public returns(uint256, uint256) {
+    function getHoldings(address user) public view returns(uint256, uint256) {
          uint256 yt = IERC20(address(yieldToken)).balanceOf(user);
          uint256 pt = IERC20(address(principalToken)).balanceOf(user);
          return (yt, pt);
     }
 
-    function getCurrentAPY() public returns(uint256) {
+    function getCurrentAPY() public pure returns(uint256) {
         return 10; // represents 10%
     }
 }
