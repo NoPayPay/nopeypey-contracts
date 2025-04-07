@@ -63,8 +63,14 @@ contract VaultTest is Test {
         uint256 balanceAfter = usdc.balanceOf(INITIAL_OWNER);
         console.log("balance after", balanceAfter);
 
+        uint256 userDeposit = vault.userDeposits(INITIAL_OWNER);
+        console.log("userDepositAmount", userDeposit);
+
         vm.warp(passedlockPeriod); // passing the lockup period
-        vault.withdrawPrincipal();
+        uint256 wdAmount = 50e6;
+        vault.withdrawPrincipal(wdAmount);
+         uint256 userDepositAfterWd = vault.userDeposits(INITIAL_OWNER);
+        console.log("user Deposit Amount After Wd", userDepositAfterWd);
         uint256 balanceAfterWd = usdc.balanceOf(INITIAL_OWNER);
         console.log("balance after WD", balanceAfterWd);
 
@@ -80,7 +86,8 @@ contract VaultTest is Test {
         console.log("balance after deposit", balanceAfterDeposit);
 
         vm.warp(passedlockPeriod); // passing the lockup period
-        vault.withdrawPrincipal();
+        uint256 wdAmount = 50e6;
+        vault.withdrawPrincipal(wdAmount);
         uint256 balanceAfterWd = usdc.balanceOf(INITIAL_OWNER);
         console.log("balance after WD", balanceAfterWd);
 
@@ -91,9 +98,10 @@ contract VaultTest is Test {
 
     function test_withdrawBeforeUnlockTime() public Deposited {
         uint256 passedlockPeriod = block.timestamp + 10 days;
+        uint256 wdAmount = 50e6;
         vm.warp(passedlockPeriod); // passing the lockup period
         vm.expectRevert("90-day lockup not completed");
-        vault.withdrawPrincipal();
+        vault.withdrawPrincipal(wdAmount);
         // uint256 balanceAfterWd = usdc.balanceOf(INITIAL_OWNER);
         // console.log("balance WD", balanceAfterWd);
         vm.stopPrank();
@@ -128,23 +136,24 @@ contract VaultTest is Test {
     }
 
     function test_payingMerchant() public Deposited {
-        uint256 balanceMerchantBfore = usdc.balanceOf(MERCHANT);
-        uint256 amountToPay = 50e6;
-        console.log("before payment", balanceMerchantBfore);
+        uint256 amountToPay = 5e6;
+        uint256 balanceBeforePayingMerchant = IERC20(address(yieldtoken)).balanceOf(INITIAL_OWNER);
+        console.log("before payment", balanceBeforePayingMerchant);
 
         vault.payMerchant(amountToPay, MERCHANT);
-        uint256 balanceMerchantAfter = usdc.balanceOf(MERCHANT);
-        console.log("after getting paid", balanceMerchantAfter);
+
+        uint256 balanceAfterPayingMerchant = IERC20(address(yieldtoken)).balanceOf(INITIAL_OWNER);
+        console.log("after payment", balanceAfterPayingMerchant);
 
         vm.stopPrank();
-        assert(balanceMerchantAfter > balanceMerchantBfore);
+        assert(balanceBeforePayingMerchant > balanceAfterPayingMerchant);
         
     }
 
     function test_payingMerchantExceededTheirDepositedAmount() public Deposited {
-        uint256 balanceMerchantBfore = usdc.balanceOf(MERCHANT);
-        uint256 amountToPay = 150e6;
-        console.log("before payment", balanceMerchantBfore);
+        uint256 balanceBeforePayingMerchant = IERC20(address(yieldtoken)).balanceOf(INITIAL_OWNER);
+        console.log("before payment", balanceBeforePayingMerchant);
+        uint256 amountToPay = 15e6;
 
         vm.expectRevert("Insufficient funds to cover the payment");
         vault.payMerchant(amountToPay, MERCHANT);

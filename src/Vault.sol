@@ -93,14 +93,14 @@ contract FundsVault is Ownable {
         uint256 platformShares = amount - userShares;
         yieldToken.burnFrom(msg.sender, amount); // Burning all the yield tokens
         // sending 80% of user shares to the user.
-        IERC20(sellFor).transfer(msg.sender, userShares);
+        IERC20(sellFor).transfer(msg.sender, amount);
         emit Transfer(msg.sender, address(0), userShares); 
     }
 
     /**
      * @dev user withdrawing their principal assets from the pool goes directly to the user
      */
-    function withdrawPrincipal() external {
+    function withdrawPrincipal(uint256 wdAmount) external {
         uint256 lockPeriod = tokenLockPeriod[msg.sender][address(usdc)];
         require(
             block.timestamp >= (depositTimes[msg.sender] + lockPeriod),
@@ -110,8 +110,10 @@ contract FundsVault is Ownable {
 
         uint256 principalAmount = principalToken.balanceOf(msg.sender);
         require(principalAmount > 0, "No principal to withdraw");
+        if(wdAmount > principalAmount) revert("Insufficients PT");
 
-        principalToken.burn(msg.sender, principalAmount);
+        principalToken.burn(msg.sender, wdAmount);
+        userDeposits[msg.sender] -= wdAmount;
         aavePool.withdraw(address(usdc), principalAmount, msg.sender);
         emit PrincipalWithdrew(principalAmount, msg.sender);
         fundsClaimed[msg.sender] = true;
@@ -153,8 +155,10 @@ contract FundsVault is Ownable {
      * @param merchant - a merchant wallet 
      */
     function payMerchant(uint256 amountToPay_, address merchant) external returns(uint256 paidAmount) {
+        uint256 ytBalance = IERC20(address(yieldToken)).balanceOf(msg.sender);
         // user should not be allowed to purchase any merchant more than the amount they have deposited to keep protocol stable
-        if(amountToPay_ >= userDeposits[msg.sender]) revert("Insufficient funds to cover the payment");
+        if(amountToPay_ >= ytBalance) revert("Insufficient funds to cover the payment");
+        yieldToken.burnFrom(msg.sender, amountToPay_);
         bool isPaid = usdc.transfer(merchant, amountToPay_);
         if(!isPaid) revert("payment failed");
     }

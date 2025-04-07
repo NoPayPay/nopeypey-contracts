@@ -27,18 +27,18 @@ contract DeployScript is Script {
     function run() public {
         vm.startBroadcast(INITIAL_OWNER);
         usdc = new MockUSDC();
-        yieldtoken = new YieldToken();
-        principal = new PrincipalToken();
         treasury = new Treasury(address(usdc));
-        mockAavePool = new MockAaveLendingPool(address(usdc));
+        // mockAavePool = new MockAaveLendingPool(address(usdc));
 
-        vault = new FundsVault(FundsVault.InitialSetup(INITIAL_OWNER, address(usdc), address(mockAavePool), address(treasury), address(principal), address(yieldtoken)));
+        // yieldtoken = new YieldToken();
+        // principal = new PrincipalToken();
 
-        principal.setFundsVault(address(vault));
-        yieldtoken.setFundsVault(address(vault));
-        usdc.transfer(address(vault), 50000e6);
+        // vault = new FundsVault(FundsVault.InitialSetup(INITIAL_OWNER, address(usdc), address(mockAavePool), address(treasury), address(principal), address(yieldtoken)));
 
-        console.log("vault usdc balance", usdc.balanceOf(address(vault)));
+        // principal.setFundsVault(address(vault));
+        // yieldtoken.setFundsVault(address(vault));
+        // usdc.transfer(address(vault), 50000e6);
+        // console.log("vault usdc balance", usdc.balanceOf(address(vault)));
 
         vm.stopBroadcast();
     }
